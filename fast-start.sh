@@ -129,7 +129,13 @@ else
 fi
 
 # 配置openppp2配置文件
-jq 'del(.vmem) | del(.cdn) | .ip.public="::" | .ip.interface="::" | del(.websocket.listen.wss) | .server.log="/dev/null" | del(.server.backend) | del(.server."backend-key") | ' ./openppp2/appsettings.json
+sed -i 's|"192.168.0.24"|"::"|g' ./openppp2/appsettings.json #监听所有IP
+sed -i '/"cdn": \[ 80, 443 \],/d' ./openppp2/appsettings.json #删除CDN WS支持
+sed -i '/"backend": "ws:\/\/192.168.0.24\/ppp\/webhook",/d' ./openppp2/appsettings.json
+sed -i 's/"mapping": true,/"mapping": true/' ./openppp2/appsettings.json
+sed -i '/"backend-key": "HaEkTB55VcHovKtUPHmU9zn0NjFmC6tff"/d' ./openppp2/appsettings.json #删除远程管理API支持
+sed -i '/"wss": 20443/d' ./openppp2/appsettings.json 
+sed -i 's/"ws": 20080,/"ws": 20080/' ./openppp2/appsettings.json #删除WSS支持
 
 #创建 tmux-session 并启动
 tmux new-session -d -s ppp2-s "cd openppp2 &&./ppp"
