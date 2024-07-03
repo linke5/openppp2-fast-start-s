@@ -6,6 +6,7 @@ ppp_dir="$script_dir/openppp2"
 exec_start="$ppp_dir/ppp"
 restart_policy="always"
 config_file="openppp2/appsettings.json"
+found_ppp2_s="Not Running"
 
 # 检查并安装依赖工具的函数
 check_install_dependency() {
@@ -94,6 +95,7 @@ else
     echo "成功设置 openppp2 目录下所有文件的权限为 755。"
 fi
 
+config_appsettings() {
 # 用户输入函数，带默认值
 read_input() {
     local prompt=$1
@@ -117,9 +119,10 @@ default_ws_host="www.apple.com"
 default_ws_path="/tun"
 default_backend="ws://192.168.0.24/ppp/webhook"
 default_backend_key="HaEkTB55VcHovKtUPHmU9zn0NjFmC6tff"
-default_backedn_status="off"
+default_backend_status="off"
 default_ws_status="off"
 default_wss_status="off"
+default_cdn_support_status="off"
 
 # 提示用户输入参数
 
@@ -167,28 +170,38 @@ backend=${backend:-$default_backend}
 read -p "请输入管理 API KEY [$default_backend_key]: " backend_key
 backend_key=${backend_key:-$default_backend_key}
 
-read -p "是否开启管理接口(默认关闭，开启请输入 on )" backend_status
+read -p "是否开启管理接口(默认关闭,开启请输入 on)" backend_status
 backend_status=${backend_status:-$default_backend_status}
 
-read -p "是否开启WS连接协议(默认关闭，开启请输入 on)" 
+read -p "是否开启 WS 连接协议(默认关闭.开启请输入 on)" ws_status
+ws_status=${ws_status:-$default_ws_status}
+
+read -p "是否开启 WSS 连接协议(默认关闭,开启请输入 on)" wss_status
+wss_status=${ws_status:-$default_wss_status}
+
+read -p "是否开启 CDN 支持(默认关闭,开启请输入 on)" cdn_support_status
+cdn_support_status=${cdn_support_status:-$default_cdn_support_status}
 
 # 确认用户输入的参数
 echo "参数设置如下："
-echo "concurrent = $concurrent"
+echo "运行线程数 = $concurrent"
 echo "protocol = $protocol"
 echo "protocol_key = $protocol_key"
 echo "transport = $transport"
 echo "transport_key = $transport_key"
-echo "ip_config = $ip_config"
-echo "listen_port_tcp_ppp = $listen_port_tcp_ppp"
-echo "listen_port_udp_ppp = $listen_port_udp_ppp"
-echo "listen_port_tcp_ws = $listen_port_tcp_ws"
-echo "listen_port_tcp_wss = $listen_port_tcp_wss"
-echo "ws_host = $ws_host"
-echo "ws_path = $ws_path"
+echo "监听 IP = $ip_config"
+echo "PPP TCP 监听端口 = $listen_port_tcp_ppp"
+echo "PPP UDP 监听端口 = $listen_port_udp_ppp"
+echo "WS 监听端口 = $listen_port_tcp_ws"
+echo "WSS 监听端口 = $listen_port_tcp_wss"
+echo "WS Host Info = $ws_host"
+echo "WS Path Info = $ws_path"
 echo "backend = $backend"
 echo "backend_key = $backend_key"
-echo "管理接口开启状态 $backend_status"
+echo "管理接口开启状态 = $backend_status"
+echo "WS 协议开启状态 = $ws_status"
+echo "WS 协议开启状态 = $wss_status"
+echo "CDN 支持开启状态 = $cdn_support_status"
 
 # 更新 openppp2/appsettings.json 文件
 jq --arg concurrent "$concurrent" \
@@ -226,7 +239,7 @@ mv openppp2/appsettings_tmp.json openppp2/appsettings.json
 
 total_mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 total_mem_mb=$((total_mem_kb / 1024))
-memory_threshold=256
+memory_threshold=96
 if [[ $total_mem_mb -ge $memory_threshold ]]; then
     jq 'del(.vmem)' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
     echo "vmem 部分已删除"
@@ -234,13 +247,79 @@ else
     echo "系统内存小于 $memory_threshold MB，未删除 vmem 部分"
 fi
 
-
-if [[ $backend_status == off ]]; then
-	jq 'del(.server.backend)' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
-	jq 'del(.server["backend-key"])' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
-	echo "管理接口部分已删除，管理功能关闭"
+# 检查 backend_status 并删除相应配置
+if [[ $backend_status == "off" ]]; then
+    jq 'del(.server.backend, .server["backend-key"])' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
+    echo "管理接口部分已删除，管理功能关闭"
 else
-	echo "管理接口部分未删除，管理功能开启"
+    echo "管理接口部分未删除，管理功能开启"
+fi
+
+# 检查 ws_status 和 wss_status 并删除相应配置
+if [[ $ws_status == "off" ]]; then
+    jq 'del(.websocket.listen.ws)' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
+    if [[ $wss_status == "off" ]]; then
+        jq 'del(.websocket.listen.wss)' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
+        echo "已关闭 WS,WSS 协议支持"
+    else
+        echo "已关闭 WS 协议支持"
+    fi
+elif [[ $wss_status == "off" ]]; then
+    jq 'del(.websocket.listen.wss)' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
+    if [[ $ws_status == "off" ]]; then
+        jq 'del(.websocket.listen.ws)' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
+        echo "已关闭 WS,WSS 协议支持"
+    else
+        echo "已关闭 WSS 协议支持"
+    fi
+fi
+
+# 检查 cdn_support_status 并删除相应配置
+if [[ $cdn_support_status == "off" ]]; then
+    jq 'del(.cdn)' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
+    echo "已关闭 CDN 支持"
+else
+    echo "未关闭 CDN 支持"
+fi
+}
+config_appsettings
+
+# 检查 tmux 会话是否存在
+check_tmux_session() {
+    tmux_list=$(tmux ls 2>/dev/null)
+    found_ppp2_s="Not Running"
+    while IFS= read -r line; do
+        session_name=$(echo "$line" | awk -F: '{print $1}')
+        if [[ "$session_name" == *"ppp2-s"* ]]; then
+            found_ppp2_s="Running"
+            break
+        fi
+    done <<< "$tmux_list"
+}
+
+# 检查 systemd 服务状态
+check_systemctl_ppp2() {
+    status_output=$(systemctl status ppp 2>&1)
+    if [[ $? -ne 0 ]]; then
+        if [[ $status_output =~ "could not be found" ]]; then
+            systemctl_status="Not Running"
+        else
+            echo "ppp服务不存在"
+            systemctl_status="Not Running"
+        fi
+    else
+        systemctl_status="Running"
+    fi
+}
+
+# 检查 tmux 会话和 systemd 服务状态
+check_tmux_session
+check_systemctl_ppp2
+
+# 如果 tmux 会话或 systemd 服务存在，则退出并返回错误
+if [[ $found_ppp2_s == "Running" ]] || [[ $systemctl_status == "Running" ]]; then
+    echo "ppp2-s tmux 会话或 systemd 服务已经存在，安装中止。"
+    exit 1
 fi
 
 # 选择部署方式
@@ -278,11 +357,16 @@ EOF
 elif [ "$deploy_method" == "2" ]; then
     echo "创建 tmux 会话并启动 PPP..."
     tmux new-session -d -s ppp2-s "cd $ppp_dir && ./ppp"
-    echo "PPP 已在 tmux 会话中启动。"
+    check_tmux_session
+    if [[ $found_ppp2_s == "Running" ]]; then
+        echo "PPP 已在 tmux 会话中启动"
+    else
+        echo "PPP 启动失败，请手动运行或者更换安装方式"
+        exit 1
+    fi
 
 # 无效输入
 else
     echo "无效输入，请运行脚本并选择 1 或 2。"
     exit 1
 fi
-
