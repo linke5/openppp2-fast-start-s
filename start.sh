@@ -241,6 +241,20 @@ get_openppp2() {
     rm -rf "$unzip_dir" openppp2-latest.zip
 }
 
+check_ppp2_status() {
+    # 检查 tmux 会话和 systemd 服务状态
+    check_tmux_session
+    check_systemctl_ppp2
+
+    # 如果 tmux 会话或 systemd 服务存在，则退出并返回错误
+    if [[ $found_ppp2_s == "Running" ]] || [[ $systemctl_status == "Running" ]]; then
+        echo "ppp2-s tmux 会话或 systemd 服务已经存在"
+        read -p "是否覆盖安装（y/n）" install_choose
+    elif [[ $install_choose == "yes" ]] || [[ $install_choose == "y" ]] || [[ $install_choose == "no" ]] || [[ $install_choose == "n" ]]; then
+        deploy_openppp2
+    if
+}
+
 # 检查 tmux 会话是否存在
 check_tmux_session() {
     tmux_list=$(tmux ls 2>/dev/null || true)
@@ -265,16 +279,6 @@ check_systemctl_ppp2() {
 }
 
 deploy_openppp2() {
-    # 检查 tmux 会话和 systemd 服务状态
-    check_tmux_session
-    check_systemctl_ppp2
-
-    # 如果 tmux 会话或 systemd 服务存在，则退出并返回错误
-    if [[ $found_ppp2_s == "Running" ]] || [[ $systemctl_status == "Running" ]]; then
-        echo "ppp2-s tmux 会话或 systemd 服务已经存在，安装中止。"
-        exit 1
-    fi
-
     # 选择部署方式
     echo "请选择部署方式："
     echo "1. 使用 systemd 服务"
@@ -333,4 +337,4 @@ check_install_dependency tmux "sudo apt install -y tmux"
 check_systeminfo
 get_openppp2
 config_appsettings
-deploy_openppp2
+check_ppp2_status
