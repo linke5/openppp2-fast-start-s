@@ -4,14 +4,35 @@
 set -e
 
 # Define installation directories
+
 install_dir="/usr/local/bin/openppp2"
 config_dir="/etc/openppp2"
+unzip_dir="/tmp/ppp2"
 lib_dir="/usr/local/lib/openppp2"
 log_dir="/var/log/openppp2"
 
 exec_start="$install_dir/ppp"
 restart_policy="always"
 config_file="$config_dir/appsettings.json"
+
+default_concurrent="1"
+default_protocol="aes-128-cfb"
+default_protocol_key="N6HMzdUs7IUnYHwq"
+default_transport="aes-256-cfb"
+default_transport_key="HWFweXu2g5RVMEpy"
+default_ip_config="::"
+default_listen_port_tcp_ppp="20000"
+default_listen_port_udp_ppp="20000"
+default_listen_port_tcp_ws="20080"
+default_listen_port_tcp_wss="20443"
+default_ws_host="www.apple.com"
+default_ws_path="/tun"
+default_backend="ws://192.168.0.24/ppp/webhook"
+default_backend_key="HaEkTB55VcHovKtUPHmU9zn0NjFmC6tff"
+default_backend_status="off"
+default_ws_status="off"
+default_wss_status="off"
+default_cdn_support_status="off"
 
 # 检查并安装依赖工具的函数
 check_install_dependency() {
