@@ -229,6 +229,7 @@ get_openppp2() {
     echo "安装 openppp2 到 $install_dir ..."
     mkdir -p "$install_dir" "$config_dir" "$lib_dir" "$log_dir"
     mv "$unzip_dir"/* "$install_dir"
+    mv "$install_dir"/appsettings.jsom "$config_dir"
     echo "成功安装 openppp2。"
 
     # 设置文件权限
