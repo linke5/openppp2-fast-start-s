@@ -4,10 +4,8 @@
 set -e
 
 # Define installation directories
-
 install_dir="/usr/local/bin/openppp2"
 config_dir="/etc/openppp2"
-unzip_dir="/tmp/ppp2"
 lib_dir="/usr/local/lib/openppp2"
 log_dir="/var/log/openppp2"
 
@@ -74,24 +72,24 @@ config_appsettings() {
 
     # 提示用户输入参数
     echo "[]内为默认值"
-    read_input "请输入工作线程数" concurrent $default_concurrent
-    read_input "请输入加密协议" protocol $default_protocol
-    read_input "请输入加密密钥" protocol_key $default_protocol_key
-    read_input "请输入传输加密协议" transport $default_transport
-    read_input "请输入加密密钥" transport_key $default_transport_key
-    read_input "请输入监听 IP" ip_config $default_ip_config
-    read_input "请输入 PPP TCP 协议监听端口" listen_port_tcp_ppp $default_listen_port_tcp_ppp
-    read_input "请输入 PPP UDP 协议监听端口" listen_port_udp_ppp $default_listen_port_udp_ppp
-    read_input "请输入 WS 协议监听端口" listen_port_tcp_ws $default_listen_port_tcp_ws
-    read_input "请输入 WSS 协议监听端口" listen_port_tcp_wss $default_listen_port_tcp_wss
-    read_input "请输入 WS 协议 Host" ws_host $default_ws_host
-    read_input "请输入 WS 协议 Path" ws_path $default_ws_path
-    read_input "请输入管理 API URL" backend $default_backend
-    read_input "请输入管理 API KEY" backend_key $default_backend_key
-    read_input "是否开启管理接口(默认关闭,开启请输入 on)" backend_status $default_backend_status
-    read_input "是否开启 WS 连接协议(默认关闭.开启请输入 on)" ws_status $default_ws_status
-    read_input "是否开启 WSS 连接协议(默认关闭,开启请输入 on)" wss_status $default_wss_status
-    read_input "是否开启 CDN 支持(默认关闭,开启请输入 on)" cdn_support_status $default_cdn_support_status
+    read_input "请输入工作线程数" concurrent "$default_concurrent"
+    read_input "请输入加密协议" protocol "$default_protocol"
+    read_input "请输入加密密钥" protocol_key "$default_protocol_key"
+    read_input "请输入传输加密协议" transport "$default_transport"
+    read_input "请输入加密密钥" transport_key "$default_transport_key"
+    read_input "请输入监听 IP" ip_config "$default_ip_config"
+    read_input "请输入 PPP TCP 协议监听端口" listen_port_tcp_ppp "$default_listen_port_tcp_ppp"
+    read_input "请输入 PPP UDP 协议监听端口" listen_port_udp_ppp "$default_listen_port_udp_ppp"
+    read_input "请输入 WS 协议监听端口" listen_port_tcp_ws "$default_listen_port_tcp_ws"
+    read_input "请输入 WSS 协议监听端口" listen_port_tcp_wss "$default_listen_port_tcp_wss"
+    read_input "请输入 WS 协议 Host" ws_host "$default_ws_host"
+    read_input "请输入 WS 协议 Path" ws_path "$default_ws_path"
+    read_input "请输入管理 API URL" backend "$default_backend"
+    read_input "请输入管理 API KEY" backend_key "$default_backend_key"
+    read_input "是否开启管理接口(默认关闭,开启请输入 on)" backend_status "$default_backend_status"
+    read_input "是否开启 WS 连接协议(默认关闭.开启请输入 on)" ws_status "$default_ws_status"
+    read_input "是否开启 WSS 连接协议(默认关闭,开启请输入 on)" wss_status "$default_wss_status"
+    read_input "是否开启 CDN 支持(默认关闭,开启请输入 on)" cdn_support_status "$default_cdn_support_status"
 
     # 确认用户输入的参数
     echo "参数设置如下："
@@ -139,8 +137,7 @@ config_appsettings() {
         .tcp.listen.port = ($listen_port_tcp_ppp | tonumber) |
         .udp.listen.port = ($listen_port_udp_ppp | tonumber) |
         .websocket.host = $ws_host |
-        .websocket.path 
-        = $ws_path |
+        .websocket.path = $ws_path |
         .websocket.listen.ws = ($listen_port_tcp_ws | tonumber) |
         .websocket.listen.wss = ($listen_port_tcp_wss | tonumber) |
         .server.backend = $backend |
@@ -194,7 +191,7 @@ get_openppp2() {
     country_code=$(echo "$response" | jq -r '.country')
 
     # 判断地理位置并设置下载源
-    if [ "$country_code" == "CN" ]; then
+    if [ "$country_code" == "CN" ];then
         echo "检测到您的机器位于中国，使用加速源。"
     else
         echo "检测到您的机器位于海外，使用 GitHub 官方源。"
@@ -246,13 +243,19 @@ check_ppp2_status() {
     check_tmux_session
     check_systemctl_ppp2
 
-    # 如果 tmux 会话或 systemd 服务存在，则退出并返回错误
+    # 如果 tmux 会话或 systemd 服务存在，则询问是否覆盖安装
     if [[ $found_ppp2_s == "Running" ]] || [[ $systemctl_status == "Running" ]]; then
         echo "ppp2-s tmux 会话或 systemd 服务已经存在"
         read -p "是否覆盖安装（y/n）" install_choose
-    elif [[ $install_choose == "yes" ]] || [[ $install_choose == "y" ]] || [[ $install_choose == "no" ]] || [[ $install_choose == "n" ]]; then
+        if [[ $install_choose == "y" || $install_choose == "Y" ]]; then
+            deploy_openppp2
+        else
+            echo "安装已取消"
+            exit 0
+        fi
+    else
         deploy_openppp2
-    if
+    fi
 }
 
 # 检查 tmux 会话是否存在
