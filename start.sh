@@ -299,7 +299,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=$install_dir
+WorkingDirectory=$config_dir
 ExecStart=$exec_start
 Restart=$restart_policy
 RestartSec=10
