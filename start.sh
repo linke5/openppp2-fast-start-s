@@ -226,7 +226,7 @@ get_openppp2() {
     echo "安装 openppp2 到 $install_dir ..."
     mkdir -p "$install_dir" "$config_dir" "$lib_dir" "$log_dir"
     mv "$unzip_dir"/* "$install_dir"
-    mv "$install_dir"/appsettings.json "$config_dir"
+    wget -O "$config_dir/appsettings.json" "https://github.com/liulilittle/openppp2/raw/refs/heads/main/appsettings.json"
     echo "成功安装 openppp2。"
 
     # 设置文件权限
